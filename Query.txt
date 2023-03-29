@@ -1,0 +1,13 @@
+pageViews
+| where timestamp > ago(24h)
+| summarize by client_Id, session_Id
+| extend page_sequence = row_number() over (partition by session_Id order by timestamp asc)
+| join kind=inner (
+    pageViews
+    | where timestamp > ago(24h)
+    | summarize by session_Id
+    | extend last_page = max(page_sequence)
+    ) on session_Id
+| extend page_sequence = last_page - page_sequence + 1
+| project client_Id, session_Id, page_sequence, url
+| order by client_Id, session_Id, page_sequence asc
