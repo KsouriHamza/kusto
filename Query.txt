@@ -11,3 +11,18 @@ pageViews
 | extend page_sequence = last_page - page_sequence + 1
 | project client_Id, session_Id, page_sequence, url
 | order by client_Id, session_Id, page_sequence asc
+
+
+pageViews
+| where timestamp > ago(24h)
+| summarize by client_Id, session_Id
+| extend page_sequence = row_number() over (partition by session_Id order by timestamp asc)
+| join kind=inner (
+    pageViews
+    | where timestamp > ago(24h)
+    | summarize last_page = max(page_sequence) by session_Id
+    ) on session_Id
+| extend page_sequence_reversed = last_page - page_sequence + 1
+| project client_Id, session_Id, page_sequence_reversed, url
+| order by client_Id, session_Id, page_sequence_reversed asc
+
